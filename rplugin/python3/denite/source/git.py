@@ -1,13 +1,16 @@
 from .base import Base
 import subprocess
 
+
 class Source(Base):
-    
+
     def __init__(self, vim):
         super().__init__(vim)
 
         self.name = 'git'
         self.kind = 'git'
+        # TODO: allow this to be configuable
+        self.__branch_cmd = ['git', 'branch', '--no-color', '--list', '--all', '-vv']
 
     def on_init(self, context):
         pass
@@ -17,11 +20,19 @@ class Source(Base):
 
     def gather_candidates(self, context):
 
-        result = subprocess.run(["git", "branch", "--no-color", "--list"], stdout=subprocess.PIPE, universal_newlines=True)
-        candidates = result.stdout
-        print(candidates)
+        result = subprocess.run(self.__branch_cmd, stdout=subprocess.PIPE)
 
-        return list(map(
-            lambda candidate: {
-                    'word': candidate
-                }, candidates))
+        candidates = []
+
+        for candidate in result.stdout.decode('UTF-8').splitlines():
+
+            candidate = candidate.strip().strip('* ')
+            branch = candidate.split(' ')[0]
+
+            candidates.append({
+                'kind': 'git',
+                'action__checkout': branch,
+                'word': candidate
+            })
+
+        return candidates
